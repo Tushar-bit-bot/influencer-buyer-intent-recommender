@@ -3,76 +3,119 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from recommender import recommend_creators, score_catalog
+
 
 BASE_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = BASE_DIR / "outputs"
 DATA_PATH = BASE_DIR / "influencer_buyer_intent_dataset.csv"
 
 st.set_page_config(
-    page_title="Influencer Recommendation Dashboard",
+    page_title="Influencer Campaign Planner",
+    page_icon="🎯",
     layout="wide",
 )
 
-st.title("Influencer Recommendation Dashboard")
-st.caption("Explore creator recommendations by campaign objective and audience type.")
-
-objective = st.radio(
-    "Campaign objective",
-    ["Direct Sales", "Mass Brand Awareness"],
-    horizontal=True,
+st.title("Influencer Campaign Planner")
+st.caption(
+    "Enter campaign details to get a ranked shortlist. "
+    "The full creator dataset is not shown on this page."
 )
 
-if objective == "Direct Sales":
-    recommendation_path = OUTPUT_DIR / "direct_sales_recommendation.csv"
-else:
-    recommendation_path = OUTPUT_DIR / "awareness_recommendations.csv"
+if not DATA_PATH.exists():
+    st.error("The creator dataset file is missing from the project folder.")
+    st.stop()
 
-st.subheader(f"{objective} recommendations")
 
-if recommendation_path.exists():
-    recommendations = pd.read_csv(recommendation_path)
-    st.metric("Creators in this recommendation file", len(recommendations))
-    st.dataframe(recommendations, use_container_width=True)
-else:
-    st.error(f"Recommendation file not found: {recommendation_path}")
+@st.cache_data(show_spinner="Preparing the recommendation model...")
+def load_scored_catalog(data_path: str, modified_at: float) -> pd.DataFrame:
+    # modified_at invalidates the cached result if the CSV changes.
+    del modified_at
+    return score_catalog(pd.read_csv(data_path))
 
-st.divider()
-st.subheader("Buyer vs. Watcher audience view")
 
-audience_view = st.radio(
-    "Choose an audience",
-    ["High-Intent Buyers", "Passive Watchers"],
-    horizontal=True,
-)
+try:
+    catalog = load_scored_catalog(str(DATA_PATH), DATA_PATH.stat().st_mtime)
+except Exception as error:
+    st.error(f"Could not prepare recommendations: {error}")
+    st.stop()
 
-if DATA_PATH.exists():
-    creators = pd.read_csv(DATA_PATH)
+with st.form("campaign_inputs"):
+    st.subheader("Campaign details")
+    product_query = st.text_input(
+        "What product or category are you promoting?",
+        placeholder="For example: wireless earbuds, skincare, or fitness app",
+    )
 
-    audience_data = creators[
-        creators["Audience_Persona"] == audience_view
-    ]
+    first_row, second_row = st.columns(2)
+    with first_row:
+        objective = st.selectbox(
+            "Campaign objective",
+            ["Direct Sales", "Mass Brand Awareness"],
+        )
+        max_cost_per_creator = st.number_input(
+            "Maximum budget per creator (USD)",
+            min_value=75.0,
+            max_value=1_000_000.0,
+            value=3000.0,
+            step=100.0,
+        )
+    with second_row:
+        top_k = st.slider("How many recommendations?", 1, 25, 10)
+        minimum_buyer_score = st.slider(
+            "Minimum buyer score for Direct Sales (%)",
+            min_value=50,
+            max_value=95,
+            value=80,
+        )
 
-    if audience_data.empty:
-        st.warning(f"No rows found for {audience_view}.")
+    submitted = st.form_submit_button(
+        "Get recommendations",
+        type="primary",
+        use_container_width=True,
+    )
+
+if submitted:
+    try:
+        results = recommend_creators(
+            scored_catalog=catalog,
+            product_query=product_query,
+            objective=objective,
+            max_cost_per_creator=max_cost_per_creator,
+            top_k=top_k,
+            minimum_buyer_score=float(minimum_buyer_score),
+        )
+    except ValueError as error:
+        st.warning(str(error))
+    except Exception as error:
+        st.error(f"Could not generate recommendations: {error}")
     else:
-        st.write(f"Creator profiles labeled **{audience_view}**: {len(audience_data)}")
+        st.divider()
+        st.subheader("Your recommendations")
 
-        averages = audience_data[
-            [
-                "Save_Share_Rate",
-                "Comment_Intent_Score",
-                "Bot_Risk_Index",
-                "CVI",
-            ]
-        ].mean()
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        col1.metric("Save/share rate", f"{averages['Save_Share_Rate']:.2f}%")
-        col2.metric("Comment intent", f"{averages['Comment_Intent_Score']:.2f}")
-        col3.metric("Bot risk", f"{averages['Bot_Risk_Index']:.2f}")
-        col4.metric("CVI", f"{averages['CVI']:.2f}")
-
-        st.caption("CVI is shown in the dataset’s original index scale.")
+        if results.empty:
+            st.warning(
+                "No creators matched these settings. Try a higher budget, "
+                "a lower buyer-score cutoff, or a broader product description."
+            )
+        else:
+            st.caption(
+                "Buyer scores, reach, views, and sponsorship costs are estimates "
+                "from the prototype dataset, not measured campaign outcomes."
+            )
+            st.metric("Creators recommended", len(results))
+            st.dataframe(
+                results,
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.download_button(
+                "Download these recommendations",
+                data=results.to_csv(index=False).encode("utf-8"),
+                file_name="influencer_recommendations.csv",
+                mime="text/csv",
+            )
 else:
-    st.error(f"Dataset not found: {DATA_PATH}")
+    st.info(
+        "Fill in the campaign details and select **Get recommendations**. "
+        "The app will calculate a fresh shortlist from the saved creator data."
+    )
