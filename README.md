@@ -1,47 +1,48 @@
 # AI-Powered Influencer Recommendation System & Buyer Intent Estimator
 
-A portfolio prototype that ranks influencer profiles for direct-sales or mass-awareness campaigns and presents the results in a Streamlit dashboard.
+A portfolio prototype that ranks influencer profiles for direct-sales or mass-awareness campaigns. The Streamlit app now accepts campaign inputs and calculates a fresh shortlist from the creator dataset.
 
 ## What the project does
 
-- Compares a product category with creator niches using TF-IDF and cosine similarity. The current dataset has niche labels but no creator bios, so matching is category-level.
+- Compares a product or category with creator niches using TF-IDF and cosine similarity. The dataset has niche labels but no creator bios, so matching is category-level.
 - Estimates buyer persona scores with a Logistic Regression classifier using creator metadata and engagement signals.
 - Ranks candidates differently by campaign objective:
   - **Direct Sales:** buyer-class score, product-niche similarity, and bot-risk score.
-  - **Mass Brand Awareness:** estimated reach, estimated views, and bot-risk score.
+  - **Mass Brand Awareness:** estimated views, estimated reach, product-niche similarity, and bot-risk score.
 - Estimates sponsorship cost, CPE, and CPM using transparent pricing rules.
-- Displays saved recommendation tables and a Buyer vs. Watcher audience view in Streamlit.
+- Shows a shortlist from the campaign form instead of displaying the full creator dataset or saved recommendation tables.
 
 ## Project files
 
-```text
+\`\`\`text
 INFLUENCER/
 ├── app.py
+├── recommender.py
 ├── influencer.ipynb
-├── influencer_buyer_intent_dataset.csv   # local input data; share only if its license permits
+├── influencer_buyer_intent_dataset.csv
 ├── requirements.txt
 └── outputs/
     ├── direct_sales_recommendation.csv
     ├── awareness_recommendations.csv
     └── buyer_vs_watcher_metrics.png
-```
+\`\`\`
 
-The Streamlit app reads the two recommendation CSVs from `outputs/` and the input dataset from the project root. The structured `influencer.ipynb` notebook contains the analysis and recommendation workflow; run its cells from top to bottom to generate or refresh the output files before launching the app.
+The notebook contains the exploratory analysis and can still generate the saved tables and chart in \`outputs/\`. The Streamlit app reads the creator CSV directly and calculates recommendations from the form, so you do not need to rerun the notebook for each campaign.
 
-## Setup and run
+## Run the app
 
-Open a terminal in the project folder and activate the Python environment that has this project's dependencies installed. Then run:
+Install the dependencies, then run these commands from the project folder:
 
-```bash
+\`\`\`bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
-```
+\`\`\`
 
-The app offers a campaign-objective selector and a Buyer vs. Watcher audience view.
+In the page, enter a product or category, choose the campaign objective, set the maximum budget per creator, and choose how many results to show. For Direct Sales, you can also set a minimum buyer score. Select **Get recommendations** to see the matching shortlist. The app displays only the results for that submission and lets you download them as a CSV.
 
 ## Data fields used
 
-The input file used in this prototype has 1,000 creator records and includes platform, niche, tier, followers, engagement rate, save/share rate, comment-intent score, bot-risk index, CVI, and audience persona.
+The input file has 1,000 creator records and includes platform, niche, tier, followers, engagement rate, save/share rate, comment-intent score, bot-risk index, CVI, and audience persona.
 
 ## Model and demo results
 
@@ -53,13 +54,14 @@ At the 0.80 buyer-score cutoff, 35 creators were selected; precision against the
 
 - Persona labels align exactly with CVI bands in the supplied dataset. The classifier may be reproducing the rules used to create the labels; its scores do not establish real-world purchase intent.
 - There are no actual purchases, attributed conversions, or campaign outcomes in the data.
-- The dataset does not include creator bios or raw comments. TF-IDF uses a manually written niche vocabulary; the comment-intent value is supplied as a feature rather than trained from raw comments here.
-- Measured reach and views are absent. The project estimates them from follower counts using platform-level assumptions.
+- The dataset does not include creator bios or raw comments. TF-IDF uses a manually written niche vocabulary; the comment-intent value is supplied as a feature rather than trained from raw comments.
+- Measured reach and views are absent. The app estimates them from follower counts using platform-level assumptions.
 - Sponsorship CPM values, platform adjustments, and the minimum per-post fee are demo assumptions, not market quotes.
 - CPE uses estimated engagements from followers multiplied by the engagement-rate percentage.
 - The dataset does not provide creator names, target-region audience shares, or age demographics.
+- The app shows only a shortlist, but the dataset CSV itself is still included in the repository. Confirm that its license permits redistribution before sharing the repository publicly.
 
-Before publishing the repository, confirm that the dataset license allows redistribution. If it does not, omit the CSV and explain how users can obtain an authorized copy. Do not describe the estimated metrics as observed campaign performance.
+Do not describe the estimated metrics as observed campaign performance.
 
 ## Next improvements
 
@@ -68,5 +70,3 @@ Before publishing the repository, confirm that the dataset license allows redist
 3. Collect click and conversion outcomes to train and evaluate buyer-intent models against real outcomes.
 4. Calibrate probability scores and select decision thresholds on a dedicated validation set.
 5. Add region and demographic audience attributes, and test ranking quality across groups.
-
-
