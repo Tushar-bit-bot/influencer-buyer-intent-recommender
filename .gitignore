@@ -1,0 +1,18 @@
+# Python environment and cache files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Credentials and local configuration
+.env
+**/.env
+.streamlit/secrets.toml
+
+# Notebook-generated files
+.ipynb_checkpoints/
+
+# Unused placeholder folder and duplicate notebook
+/genai/
+/influencer - Copy.ipynb
+
