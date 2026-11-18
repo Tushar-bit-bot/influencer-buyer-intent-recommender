@@ -26,7 +26,7 @@ INFLUENCER/
     └── buyer_vs_watcher_metrics.png
 ```
 
-The Streamlit app reads the two recommendation CSVs from `outputs/` and the input dataset from the project root. The structured `influencer.ipynb` notebook contains the analysis and recommendation workflow; run its cells from top to bottom to generate or refresh the output files before launching the app.
+The Streamlit app reads the creator dataset from the project root. Visitors can enter product details, choose a niche, campaign objective, and budget, and receive recommendations ranked from the full creator dataset. Reach, views, and costs are recalculated in the app from project assumptions. The `outputs/` CSVs remain saved examples of the earlier notebook recommendations. The structured `influencer.ipynb` notebook contains the analysis workflow.
 
 ## Setup and run
 
@@ -37,7 +37,7 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-The app offers a campaign-objective selector and a Buyer vs. Watcher audience view.
+The app includes an interactive campaign form for product name/description, category, target audience/region, objective, budget, platform, maximum bot risk, minimum buyer-intent score, and result count. It displays ranked creator cards, summary metrics, a match-score chart, and an expandable creator table. A buyer-versus-watcher section includes group metrics and a normalized comparison chart. Target audience/region is collected for context, but the current dataset has no demographic or region fields, so it does not affect ranking yet.
 
 ## Data fields used
 
